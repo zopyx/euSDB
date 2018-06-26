@@ -1,8 +1,10 @@
+import os
 import requests
 
 
 CAS_QUERY = 'https://www.eusdb.de/api/1.1/search/?cas={cas}'
-EUSDB_TOKEN = '1f3fc0231796424d85524d11d28424fd'
+
+EUSDB_TOKEN = os.environ['EUSDB_TOKEN']
 
 SIGNAL_WORDS = {
     'Dgr': 'GEFAHR'
@@ -16,7 +18,6 @@ def query(cas_no):
         'accept': 'application/json',
         'authorization': 'Token {token}'.format(token=EUSDB_TOKEN)
     }
-    print(url)
     result = requests.get(url, headers=headers)
     if result.status_code != 200:
         raise ValueError('Unknown CAS number: {}'.format(cas_no))
@@ -56,9 +57,15 @@ def query(cas_no):
             h_phrases = [h for h in h_phrases if h.startswith('H')]
             cas_data['h_phrases'] = h_phrases
 
+            p_phrases = detail_data['p_phrases'].split(';')
+            p_phrases = [p.strip() for p in p_phrases]
+            p_phrases = [p for p in p_phrases if p.startswith('P')]
+            cas_data['p_phrases'] = p_phrases
+
             cas_data['signalword'] = SIGNAL_WORDS[detail_data['signalword']]
 
     cas_data['synonyms'] = sorted(list(set(synonyms)))
+    cas_data['name'] = cas_data['names'][0]
     return cas_data
 
 
