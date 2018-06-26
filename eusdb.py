@@ -24,28 +24,39 @@ def query(cas_no):
     data = result.json()
     if data['count'] == 0:
         return None
-
-    detail_url = data['results'][0]['url']
-    detail_result = requests.get(detail_url, headers=headers)
-    if detail_result.status_code != 200:
-        raise ValueError('Detail URL {} returned with error {}'.format(detail_url, detail_result.status_code))
-    detail_data = detail_result.json()
+    
+    # only include the first found vendor record
 
     cas_data = dict()
     cas_data['cas_no'] = cas_no 
-    cas_data['names'] = set([r['name'] for r in data['results']])
+    cas_data['names'] = list(set([r['name'] for r in data['results']]))
+    synonyms = list()
+    for i, vendor in enumerate(data['results']):
 
-    ghs_pictograms = detail_data['ghs_pictograms'].split(',')
-    ghs_pictograms = [ghs.strip() for ghs in ghs_pictograms]
-    ghs_pictograms = [ghs for ghs in ghs_pictograms if ghs.startswith('GHS')]
-    cas_data['ghs'] = ghs_pictograms
+        detail_url = vendor['url']
+        detail_result = requests.get(detail_url, headers=headers)
+        if detail_result.status_code != 200:
+            raise ValueError('Detail URL {} returned with error {}'.format(detail_url, detail_result.status_code))
+        detail_data = detail_result.json()                        
 
-    h_phrases = detail_data['h_phrases'].split(';')
-    h_phrases = [h.strip() for h in h_phrases]
-    h_phrases = [h for h in h_phrases if h.startswith('H')]
-    cas_data['h_phrases'] = h_phrases
+        names = detail_data['names'] .split(';')
+        names = [name.strip() for name in names if name.strip()]
+        synonyms.extend(names)
 
-    cas_data['signalword'] = SIGNAL_WORDS[detail_data['signalword']]
+        if i == 0:
+            ghs_pictograms = detail_data['ghs_pictograms'].split(',')
+            ghs_pictograms = [ghs.strip() for ghs in ghs_pictograms]
+            ghs_pictograms = [ghs for ghs in ghs_pictograms if ghs.startswith('GHS')]
+            cas_data['ghs'] = ghs_pictograms
+
+            h_phrases = detail_data['h_phrases'].split(';')
+            h_phrases = [h.strip() for h in h_phrases]
+            h_phrases = [h for h in h_phrases if h.startswith('H')]
+            cas_data['h_phrases'] = h_phrases
+
+            cas_data['signalword'] = SIGNAL_WORDS[detail_data['signalword']]
+
+    cas_data['synonyms'] = list(set(synonyms))
     return cas_data
 
 if __name__ == '__main__':
