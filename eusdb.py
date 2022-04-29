@@ -20,7 +20,7 @@ def query(cas_no):
     }
     result = requests.get(url, headers=headers)
     if result.status_code != 200:
-        raise ValueError('Unknown CAS number: {}'.format(cas_no))
+        raise ValueError(f'Unknown CAS number: {cas_no}')
 
     data = result.json()
     if data['count'] == 0:
@@ -28,17 +28,21 @@ def query(cas_no):
 
     # only include the first found vendor record
 
-    cas_data = dict()
-    cas_data['cas_no'] = cas_no
-    cas_data['names'] = list(set([r['name'] for r in data['results']]))
-    synonyms = list()
+    cas_data = {
+        'cas_no': cas_no,
+        'names': list({r['name'] for r in data['results']}),
+    }
+
+    synonyms = []
     for i, vendor in enumerate(data['results']):
 
         detail_url = vendor['url']
         detail_result = requests.get(detail_url, headers=headers)
         if detail_result.status_code != 200:
-            raise ValueError('Detail URL {} returned with error {}'.format(
-                detail_url, detail_result.status_code))
+            raise ValueError(
+                f'Detail URL {detail_url} returned with error {detail_result.status_code}'
+            )
+
         detail_data = detail_result.json()
 
         names = detail_data['names'] .split(';')
